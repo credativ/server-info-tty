@@ -124,7 +124,7 @@ with t.fullscreen():
         # print network data box, half width
 
         
-        # print contact info box, half wdith
+        # print contact info box, half width
         
         
         # logo should fill approx. the lower 1/3 of screen full width 
