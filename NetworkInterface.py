@@ -14,7 +14,7 @@ import re
 # retrieve these information from the output of /bin/ip
 #
 
-class Interface(object): # pylint: disable=too-few-public-methods
+class Interface(object):      # pylint: disable=too-few-public-methods
     """keeps data for network interface"""
 
     interfaces = []
@@ -28,7 +28,6 @@ class Interface(object): # pylint: disable=too-few-public-methods
         self.ipv4 = ""
         self.ipv6 = ""
         return
-
 
     @classmethod
     def get_interfaces(cls):
@@ -50,13 +49,16 @@ class Interface(object): # pylint: disable=too-few-public-methods
                 # first line of new interface definition
                 # create new cInterface object, take the if name and ignore
                 # the rest
-                current = Interface(words[1][:-1]) # cutting off the ":" at
-                                                   # the end of if name
+
+                # cut off the ":" at  the end of if name
+                current = Interface(words[1][:-1])
+
                 cls.interfaces.append(current)
             else:
                 # additional line to parse for the current interface
                 index = 0
-                while  index < len(words):
+
+                while index < len(words):
                     if words[index] != "":    # skip empty
                         if words[index][0:5] == "link/":
                             # if it starts with "link/" then we got the
@@ -82,7 +84,7 @@ class Interface(object): # pylint: disable=too-few-public-methods
     @classmethod
     def get_first_interface(cls):
         """returns first network interface, skipping the lookback"""
-        if cls.first_interface != None:
+        if cls.first_interface is not None:
             return cls.first_interface
 
         iflist = cls.get_interfaces()
@@ -104,10 +106,9 @@ class Interface(object): # pylint: disable=too-few-public-methods
         cls.get_first_interface()
 
         count = 0
-        
+
         for i in cls.interfaces:
             if i.type != "loopback":
-                count = count +1
+                count = count + 1
 
-        return count            
-            
+        return count
