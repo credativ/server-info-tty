@@ -5,6 +5,11 @@
 # License: MIT, see LICENSE.txt for details.
 #
 
+"""
+This class stores information about the current computers network interfaces.
+The data is filled by class methods parsing the ip command output
+"""
+
 import subprocess
 import re
 
@@ -34,7 +39,7 @@ class Interface(object):      # pylint: disable=too-few-public-methods
     def get_interfaces(cls):
         """func to parse the output of /bin/ip to gather mac and IP address"""
 
-        if len(cls.interfaces) > 0:
+        if cls.interfaces:
             # if we already populated the interfaces array, gtfo
             return cls.interfaces
 
