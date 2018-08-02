@@ -1,5 +1,6 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
 # Copyright: 2017, 2018 peter.dreuw@credativ.de
 # License: MIT, see LICENSE.txt for details.
 #
