@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# Copyright: 2017 peter.dreuw@credativ.de
+# Copyright: 2017, 2018 peter.dreuw@credativ.de
 # License: MIT, see LICENSE.txt for details.
 #
 
@@ -92,3 +92,22 @@ class Interface(object): # pylint: disable=too-few-public-methods
                 break
 
         return cls.first_interface
+
+    @classmethod
+    def get_interface_count(cls):
+        """
+        returns the number of interfaces found excluding loopback,
+        will trigger a search if needed
+        """
+
+        # make shure class variables are filled
+        cls.get_first_interface()
+
+        count = 0
+        
+        for i in cls.interfaces:
+            if i.type != "loopback":
+                count = count +1
+
+        return count            
+            
