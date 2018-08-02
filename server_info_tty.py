@@ -22,7 +22,7 @@ from blessings import Terminal
 
 # import local libs
 
-from NetworkInterface import Interface
+from network_interface import Interface
 
 
 #############################################################################
