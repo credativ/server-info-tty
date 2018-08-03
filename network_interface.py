@@ -31,8 +31,8 @@ class Interface(object):      # pylint: disable=too-few-public-methods
         self.name = name
         self.type = ""
         self.hwaddress = ""
-        self.ipv4 = ""
-        self.ipv6 = ""
+        self.ipv4 = []
+        self.ipv6 = []
         return
 
     @classmethod
@@ -76,12 +76,12 @@ class Interface(object):      # pylint: disable=too-few-public-methods
                         elif words[index] == "inet":
                             # in that case, next one is ipv4 address
                             index = index + 1
-                            current.ipv4 = words[index]
+                            current.ipv4.append(words[index])
 
                         elif words[index] == "inet6":
                             # Houston, we got an IPv6 address next step
                             index = index + 1
-                            current.ipv6 = words[index]
+                            current.ipv6.append(words[index])
 
                     index = index + 1
 
@@ -95,7 +95,7 @@ class Interface(object):      # pylint: disable=too-few-public-methods
 
         iflist = cls.get_interfaces()
         for i in iflist:
-            if i.type != "loopback":
+            if (i.type != "loopback") and (i.name != "lo"):
                 cls.first_interface = i
                 break
 
@@ -114,7 +114,27 @@ class Interface(object):      # pylint: disable=too-few-public-methods
         count = 0
 
         for i in cls.interfaces:
-            if i.type != "loopback":
+            if (i.type != "loopback") and (i.name != "lo"):
                 count = count + 1
 
         return count
+
+    @classmethod
+    def get_active_interfaces(cls):
+        """
+        returns a list of interfaces with at least one IP (v4 or v6) on it
+        """
+
+        # make shure class variables are filled
+        cls.get_first_interface()
+
+        my_list = []
+        for i in cls.interfaces:
+            if (
+                    (i.type != "lookback") and
+                    (i.name != "lo") and
+                    ((i.ipv4 != []) or (i.ipv6 != []))
+            ):
+                my_list.append(i)
+
+        return my_list
