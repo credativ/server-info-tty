@@ -66,24 +66,17 @@ def print_logo(logo_text, cord_x, cord_y):
 
     return
 
+#############################################################################
+# functions to print appliance name and contact information etc.
+
+
+def print_appliance_name(box_x, box_y):
+    """prints appliance name"""
+    1
 
 #############################################################################
 # some handy network information gathering functions
 # and network info block display func
-
-def get_mac_address():
-    """returns the MAC address of first non-loopback network device"""
-    return Interface.get_first_interface().hwaddress
-
-
-def get_ipv4_address():
-    """returns the first ipv4 address of first non-loopback network device"""
-    return Interface.get_first_interface().ipv4
-
-
-def get_ipv6_address():
-    """returns the first ipv6 address of first non-loopback network device"""
-    return Interface.get_first_interface().ipv6
 
 
 def get_hostname():
@@ -99,7 +92,53 @@ def print_network_info(box_x, box_y, box_w, box_h):
     """displays network information block at box(x,y)
        with max w width and h height"""
 
-    print(T.move(box_y, box_x) + str(Interface.get_interface_count()))
+    print(T.move(box_y, box_x) +
+          T.white + "Host name .......... : " + T.normal + get_hostname())
+
+    count = Interface.get_interface_count()
+    print(T.move(box_y + 1, box_x) + T.white + "Network Interfaces . :" + T.normal)
+    print(T.move(box_y + 1, box_x + 23) + str(count) + T.white)
+
+    if ((CONFIG['DEFAULT'].get('allow_more', "yes") == "yes") and
+        (count > 1)):
+        print(T.move(box_y + 2) +
+              "Press " + T.yellow + "n" + T.white +
+              " for more network interfaces.")
+
+    # if we have at least one interface beyond loopback, show some
+    # information on this. If not, show a short warning.
+    if count > 0:
+        # active interfaces aka if with an ip address (v4 or v6)
+        interfaces = Interface.get_active_interfaces()
+        if not interfaces:
+            interfaces = Interface.get_interfaces()
+
+        y = box_y + 4
+        print(T.move(y, box_x) + "First Interface .... :")
+        print(T.move(y, box_x + 23) + T.normal + interfaces[0].name)
+        y += 1
+        print(T.move(y, box_x) + T.white + "Hardware Address ... :")
+        print(T.move(y, box_x + 23) + T.normal + interfaces[0].hwaddress)
+        y += 1
+        print(T.move(y, box_x) + T.white + "Interface type ..... :")
+        print(T.move(y, box_x + 23) + T.normal + interfaces[0].type)
+        y += 1
+
+        if CONFIG['network'].get('ipv4', "yes") == "yes":
+            print(T.move(y, box_x) + T.white + "IPv4 Address(es) ... :")
+            for i in interfaces[0].ipv4:
+                print(T.move(y, box_x + 23) + T.normal + i)
+                y += 1
+
+        if CONFIG['network'].get('ipv6', "yes") == "yes":
+            print(T.move(y, box_x) + T.white + "IPv6 Address(es) ... :")
+            for i in interfaces[0].ipv6:
+                print(T.move(y, box_x + 23) + T.normal + i)
+                y += 1
+
+    else:
+        print(T.move(box_y + 3, box_x) +
+              T.normal + T.red + "No network interfaces found." + T.white)
 
     return
 
@@ -131,7 +170,7 @@ if 'DEFAULT' in CONFIG:
 LOGO_TEXT = ""
 LOGO_LINECOUNT = 0
 
-if LOGO_FILE:
+if LOGO_FILE is not None:
     (LOGO_TEXT, LOGO_LINECOUNT) = read_logo(LOGO_FILE, REPLACE_COLORS)
 
 
@@ -146,6 +185,7 @@ with T.fullscreen():
         # print appliance name and basic information on system defined
         # in CONFIG.
         # this should cover first 1/4 of screen, full width
+        print_appliance_name(0,0)
 
         # print network data box, half width
         print_network_info(0, 16, T.width / 2, T.height-LOGO_LINECOUNT-1)
@@ -153,7 +193,7 @@ with T.fullscreen():
         # print contact info box, half width
 
         # logo should fill approx. the lower 1/3 of screen full width
-        if LOGO_FILE:
+        if LOGO_FILE is not None:
             # print out logo if defined
             print_logo(LOGO_TEXT, 0, T.height-LOGO_LINECOUNT)
 
