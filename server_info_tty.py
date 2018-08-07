@@ -179,11 +179,13 @@ def print_host_info(box_x, box_y, box_w, box_h):
             return
 
         command = SSH_FP_COMMAND % key_file
-        fp = str(subprocess.Popen(command.split(" "),
-                                  universal_newlines=True,
-                                  stdout=subprocess.PIPE).stdout.read())
+        finger_print = str(
+            subprocess.Popen(command.split(" "),
+                             universal_newlines=True,
+                             stdout=subprocess.PIPE).stdout.read()
+        )
 
-        print(T.move(box_y+3, box_x) + fp)
+        print(T.move(box_y+3, box_x) + finger_print)
     return
 
 
@@ -295,9 +297,9 @@ with T.fullscreen():
         print_appliance_name(1, 1, T.width, 1)
 
         # print contact info box, half width
-        half_width = (T.width - 4) // 2
-        print_contact(1, 4, half_width, 6)
-        print_provider(4 + half_width, 4, half_width, 6)
+        HALF_WIDTH = (T.width - 4) // 2
+        print_contact(1, 4, HALF_WIDTH, 6)
+        print_provider(4 + HALF_WIDTH, 4, HALF_WIDTH, 6)
 
         # print host info block
         print_host_info(0, 10, T.width, 6)
