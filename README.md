@@ -25,4 +25,5 @@ In development
 * improve documentation
 * add network gateway functionallity
 * add samples for systemd tty installation
+* improve layout calculations which are more or less static right now
   
