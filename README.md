@@ -20,3 +20,9 @@ when configuring this small tool.
 
 ## Status
 In development
+
+## TODO:
+* improve documentation
+* add network gateway functionallity
+* add samples for systemd tty installation
+  
