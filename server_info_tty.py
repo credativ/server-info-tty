@@ -13,9 +13,12 @@ __version__ = '0.1'
 # This script needs the following packages to be installed
 #  - python3-blessings
 #  - python-fabulous
+#  - ssh    (if you want the ssh host key finger print)
 
 import socket
 import configparser
+import subprocess
+import os
 from time import sleep
 from blessings import Terminal
 
@@ -33,6 +36,8 @@ INI_NAME = 'config-example.ini'  # '/etc/server-info-tty/config.ini'
 RELOAD_EVERY = 60    # time in seconds to wait until reload (can be set in ini)
 
 CONFIG = configparser.ConfigParser()
+
+SSH_FP_COMMAND = "/usr/bin/ssh-keygen -l -f %s"
 
 T = Terminal()
 
@@ -70,9 +75,51 @@ def print_logo(logo_text, cord_x, cord_y):
 # functions to print appliance name and contact information etc.
 
 
-def print_appliance_name(box_x, box_y):
+def print_appliance_name(box_x, box_y, box_w, box_h):
     """prints appliance name"""
-    1
+    app_name = CONFIG['host'].get('product_name', 'Linux host')
+
+    if len(app_name) > box_w:
+        raise ValueError("width too small for configured product name")
+
+    # only underline that one if there is room for it, otherwise use TTY
+    # capabilities if possible
+    if box_h > 1:
+        print(T.move(box_y, box_x) + T.yellow_bold(app_name))
+        print(T.move(box_y + 1, box_x) + T.yellow("=" * len(app_name)))
+    else:
+        print(T.move(box_y, box_x) + T.bold_underline_yellow(app_name))
+
+    return
+
+def print_contact_info_box(box_x, box_y, box_w, box_h, dept):
+    """unified printer for provider and contact box"""
+
+    if box_h < 5:
+        raise ValueError("Box height too small: " + dept)
+
+    c_name = CONFIG[dept].get("c_name", "")
+    c_phone = CONFIG[dept].get("c_phone", "")
+    c_website = CONFIG[dept].get("c_website", "")
+    c_email = CONFIG[dept].get("c_email", "")
+    c_headline = CONFIG[dept].get("c_headline", dept.title())
+
+    print(T.move(box_y, box_x) + T.bold_underline(c_headline))
+    print(T.move(box_y + 1, box_x) + T.normal + c_name)
+    print(T.move(box_y + 2, box_x) + T.normal + c_phone)
+    print(T.move(box_y + 3, box_x) + T.normal + c_website)
+    print(T.move(box_y + 4, box_x) + T.normal + c_email)
+
+
+def print_contact(box_x, box_y, box_w, box_h):
+    """print box with contact data provided by config file"""
+    print_contact_info_box(box_x, box_y, box_w, box_h, "contact")
+
+
+def print_provider(box_x, box_y, box_w, box_h):
+    """print box with provider contact data found in config file"""
+    print_contact_info_box(box_x, box_y, box_w, box_h, "provider")
+
 
 #############################################################################
 # some handy network information gathering functions
@@ -88,19 +135,54 @@ def get_hostname():
     return name
 
 
+def print_host_info(box_x, box_y, box_w, box_h):
+    """print box information on the host"""
+
+    # show headline only if at least one option is allowed
+    if (
+            (CONFIG['host'].get('hostname', 'yes') == 'yes') or
+            (CONFIG['host'].get('ssh_host_key_fp', 'yes') == 'yes')):
+
+        print(T.move(box_y, box_x) + T.bold_underline("Host information:"))
+
+    if CONFIG['host'].get('hostname', 'yes') == 'yes':
+        print(T.move(box_y+1, box_x) +
+              T.white("Host name .......... : ") + get_hostname())
+
+    if (CONFIG['host'].get('ssh_host_key_fp', 'yes') == 'yes'):
+            key_file = CONFIG['host'].get(
+                "ssh_host_key_file", "/etc/ssh/ssh_host_rsa_key.pub")
+
+            print(T.move(box_y+2, box_x) +
+                  T.white("SSH host key fingerprint:"))
+
+            if not os.access(key_file, os.R_OK):
+                # no access to key file, bail out with error
+                print(T.move(box_y+3, box_x) +
+                      "Public host key file not readable")
+                return
+
+            command = SSH_FP_COMMAND % key_file
+            fp = str(subprocess.Popen(command.split(" "),
+                                      universal_newlines=True,
+                                      stdout=subprocess.PIPE).stdout.read())
+
+            print(T.move(box_y+3, box_x) + fp)
+    return
+
+
 def print_network_info(box_x, box_y, box_w, box_h):
     """displays network information block at box(x,y)
        with max w width and h height"""
 
-    print(T.move(box_y, box_x) +
-          T.white + "Host name .......... : " + T.normal + get_hostname())
-
+    print(T.move(box_y, box_x) + T.bold_underline("Network information"))
     count = Interface.get_interface_count()
-    print(T.move(box_y + 1, box_x) + T.white + "Network Interfaces . :" + T.normal)
+    print(T.move(box_y + 1, box_x) + T.white("Network Interfaces . :"))
     print(T.move(box_y + 1, box_x + 23) + str(count) + T.white)
 
-    if ((CONFIG['DEFAULT'].get('allow_more', "yes") == "yes") and
-        (count > 1)):
+    if (
+            (CONFIG['DEFAULT'].get('allow_more', "yes") == "yes") and
+            (count > 1)):
         print(T.move(box_y + 2) +
               "Press " + T.yellow + "n" + T.white +
               " for more network interfaces.")
@@ -114,31 +196,31 @@ def print_network_info(box_x, box_y, box_w, box_h):
             interfaces = Interface.get_interfaces()
 
         y = box_y + 4
-        print(T.move(y, box_x) + "First Interface .... :")
+        print(T.move(y, box_x) + T.white("First Interface .... :"))
         print(T.move(y, box_x + 23) + T.normal + interfaces[0].name)
         y += 1
-        print(T.move(y, box_x) + T.white + "Hardware Address ... :")
-        print(T.move(y, box_x + 23) + T.normal + interfaces[0].hwaddress)
+        print(T.move(y, box_x) + T.white("Hardware Address ... :"))
+        print(T.move(y, box_x + 23) + interfaces[0].hwaddress)
         y += 1
-        print(T.move(y, box_x) + T.white + "Interface type ..... :")
-        print(T.move(y, box_x + 23) + T.normal + interfaces[0].type)
+        print(T.move(y, box_x) + T.white("Interface type ..... :"))
+        print(T.move(y, box_x + 23) + interfaces[0].type)
         y += 1
 
         if CONFIG['network'].get('ipv4', "yes") == "yes":
-            print(T.move(y, box_x) + T.white + "IPv4 Address(es) ... :")
+            print(T.move(y, box_x) + T.white("IPv4 Address(es) ... :"))
             for i in interfaces[0].ipv4:
-                print(T.move(y, box_x + 23) + T.normal + i)
+                print(T.move(y, box_x + 23) + i)
                 y += 1
 
         if CONFIG['network'].get('ipv6', "yes") == "yes":
-            print(T.move(y, box_x) + T.white + "IPv6 Address(es) ... :")
+            print(T.move(y, box_x) + T.white("IPv6 Address(es) ... :"))
             for i in interfaces[0].ipv6:
-                print(T.move(y, box_x + 23) + T.normal + i)
+                print(T.move(y, box_x + 23) + i)
                 y += 1
 
     else:
         print(T.move(box_y + 3, box_x) +
-              T.normal + T.red + "No network interfaces found." + T.white)
+              T.normal_red("No network interfaces found."))
 
     return
 
@@ -173,6 +255,9 @@ LOGO_LINECOUNT = 0
 if LOGO_FILE is not None:
     (LOGO_TEXT, LOGO_LINECOUNT) = read_logo(LOGO_FILE, REPLACE_COLORS)
 
+# helpfull for debugging sizes
+# print("height: " + str(T.height) + " width: " + str(T.width))
+# exit()
 
 # display main info
 
@@ -185,17 +270,23 @@ with T.fullscreen():
         # print appliance name and basic information on system defined
         # in CONFIG.
         # this should cover first 1/4 of screen, full width
-        print_appliance_name(0,0)
+        print_appliance_name(1, 1, T.width, 1)
+
+        # print contact info box, half width
+        half_width = (T.width - 4) // 2
+        print_contact(1, 4, half_width, 6)
+        print_provider(4 + half_width, 4, half_width, 6)
+
+        # print host info block
+        print_host_info(0, 10, T.width, 6)
 
         # print network data box, half width
         print_network_info(0, 16, T.width / 2, T.height-LOGO_LINECOUNT-1)
 
-        # print contact info box, half width
-
         # logo should fill approx. the lower 1/3 of screen full width
         if LOGO_FILE is not None:
             # print out logo if defined
-            print_logo(LOGO_TEXT, 0, T.height-LOGO_LINECOUNT)
+            print_logo(LOGO_TEXT, 0, T.height-LOGO_LINECOUNT-2)
 
         # finally: delay reload to configured seconds
         sleep(RELOAD_EVERY)
