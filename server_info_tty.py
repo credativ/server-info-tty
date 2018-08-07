@@ -31,7 +31,7 @@ from network_interface import Interface
 #############################################################################
 # global variables (constants)
 
-INI_NAME = 'config-example.ini'  # '/etc/server-info-tty/config.ini'
+INI_NAME = 'config.ini'  # better '/etc/server-info-tty/config.ini'?
 
 RELOAD_EVERY = 60    # time in seconds to wait until reload (can be set in ini)
 
@@ -77,7 +77,10 @@ def print_logo(logo_text, cord_x, cord_y):
 
 def print_appliance_name(box_x, box_y, box_w, box_h):
     """prints appliance name"""
-    app_name = CONFIG['host'].get('product_name', 'Linux host')
+    if 'host' in CONFIG:
+        app_name = CONFIG['host'].get('product_name', 'Linux host')
+    else:
+        app_name = 'Linux host'
 
     if len(app_name) > box_w:
         raise ValueError("width too small for configured product name")
@@ -98,11 +101,15 @@ def print_contact_info_box(box_x, box_y, box_w, box_h, dept):
     if box_h < 5:
         raise ValueError("Box height too small: " + dept)
 
-    c_name = CONFIG[dept].get("c_name", "")
-    c_phone = CONFIG[dept].get("c_phone", "")
-    c_website = CONFIG[dept].get("c_website", "")
-    c_email = CONFIG[dept].get("c_email", "")
-    c_headline = CONFIG[dept].get("c_headline", dept.title())
+    if dept in CONFIG:
+        c_name = CONFIG[dept].get("c_name", "")
+        c_phone = CONFIG[dept].get("c_phone", "")
+        c_website = CONFIG[dept].get("c_website", "")
+        c_email = CONFIG[dept].get("c_email", "")
+        c_headline = CONFIG[dept].get("c_headline", dept.title())
+    else:
+        c_name = c_phone = c_website = c_email = ""
+        c_headline = dept.title()
 
     print(T.move(box_y, box_x) + T.bold_underline(c_headline))
     print(T.move(box_y + 1, box_x) + T.normal + c_name)
@@ -140,34 +147,43 @@ def print_host_info(box_x, box_y, box_w, box_h):
 
     # show headline only if at least one option is allowed
     if (
+            ('host' not in CONFIG) or
             (CONFIG['host'].get('hostname', 'yes') == 'yes') or
             (CONFIG['host'].get('ssh_host_key_fp', 'yes') == 'yes')):
 
         print(T.move(box_y, box_x) + T.bold_underline("Host information:"))
 
-    if CONFIG['host'].get('hostname', 'yes') == 'yes':
+    if (
+            ('host' not in CONFIG) or
+            (CONFIG['host'].get('hostname', 'yes') == 'yes')):
         print(T.move(box_y+1, box_x) +
               T.white("Host name .......... : ") + get_hostname())
 
-    if (CONFIG['host'].get('ssh_host_key_fp', 'yes') == 'yes'):
+    if (
+            ('host' not in CONFIG) or
+            (CONFIG['host'].get('ssh_host_key_fp', 'yes') == 'yes')):
+
+        if 'host' in CONFIG:
             key_file = CONFIG['host'].get(
                 "ssh_host_key_file", "/etc/ssh/ssh_host_rsa_key.pub")
+        else:
+            key_file = "/etc/ssh/ssh_host_rsa_key.pub"
 
-            print(T.move(box_y+2, box_x) +
-                  T.white("SSH host key fingerprint:"))
+        print(T.move(box_y+2, box_x) +
+              T.white("SSH host key fingerprint:"))
 
-            if not os.access(key_file, os.R_OK):
-                # no access to key file, bail out with error
-                print(T.move(box_y+3, box_x) +
-                      "Public host key file not readable")
-                return
+        if not os.access(key_file, os.R_OK):
+            # no access to key file, bail out with error
+            print(T.move(box_y+3, box_x) +
+                  "Public host key file not readable")
+            return
 
-            command = SSH_FP_COMMAND % key_file
-            fp = str(subprocess.Popen(command.split(" "),
-                                      universal_newlines=True,
-                                      stdout=subprocess.PIPE).stdout.read())
+        command = SSH_FP_COMMAND % key_file
+        fp = str(subprocess.Popen(command.split(" "),
+                                  universal_newlines=True,
+                                  stdout=subprocess.PIPE).stdout.read())
 
-            print(T.move(box_y+3, box_x) + fp)
+        print(T.move(box_y+3, box_x) + fp)
     return
 
 
@@ -181,6 +197,7 @@ def print_network_info(box_x, box_y, box_w, box_h):
     print(T.move(box_y + 1, box_x + 23) + str(count) + T.white)
 
     if (
+            ('DEFAULT' in CONFIG) and
             (CONFIG['DEFAULT'].get('allow_more', "yes") == "yes") and
             (count > 1)):
         print(T.move(box_y + 2) +
@@ -206,17 +223,18 @@ def print_network_info(box_x, box_y, box_w, box_h):
         print(T.move(y, box_x + 23) + interfaces[0].type)
         y += 1
 
-        if CONFIG['network'].get('ipv4', "yes") == "yes":
-            print(T.move(y, box_x) + T.white("IPv4 Address(es) ... :"))
-            for i in interfaces[0].ipv4:
-                print(T.move(y, box_x + 23) + i)
-                y += 1
+        if 'network' in CONFIG:
+            if CONFIG['network'].get('ipv4', "yes") == "yes":
+                print(T.move(y, box_x) + T.white("IPv4 Address(es) ... :"))
+                for i in interfaces[0].ipv4:
+                    print(T.move(y, box_x + 23) + i)
+                    y += 1
 
-        if CONFIG['network'].get('ipv6', "yes") == "yes":
-            print(T.move(y, box_x) + T.white("IPv6 Address(es) ... :"))
-            for i in interfaces[0].ipv6:
-                print(T.move(y, box_x + 23) + i)
-                y += 1
+            if CONFIG['network'].get('ipv6', "yes") == "yes":
+                print(T.move(y, box_x) + T.white("IPv6 Address(es) ... :"))
+                for i in interfaces[0].ipv6:
+                    print(T.move(y, box_x + 23) + i)
+                    y += 1
 
     else:
         print(T.move(box_y + 3, box_x) +
@@ -234,13 +252,17 @@ CONFIG.read(INI_NAME)
 
 # check if there is a logo defined
 if 'logo' in CONFIG:
-    LOGO_FILE = CONFIG['logo'].get("logo")
+    LOGO_FILE = CONFIG['logo'].get("logo", "./logo.txt")
     REPLACE_COLORS = {
         "red": CONFIG['logo'].get("red", "r"),
         "black": CONFIG['logo'].get("black", "b"),
     }
 else:
-    LOGO_FILE = None
+    LOGO_FILE = "./logo.txt"
+    REPLACE_COLORS = {
+        "red": "r",
+        "black": "b",
+    }
 
 
 # check if there is a sleep delay in ini file, defaults to 60 secs
