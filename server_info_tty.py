@@ -37,6 +37,7 @@ RELOAD_EVERY = 60    # time in seconds to wait until reload (can be set in ini)
 
 CONFIG = configparser.ConfigParser()
 
+# Path to ssh-keygen including path
 SSH_FP_COMMAND = "/usr/bin/ssh-keygen -l -f %s"
 
 T = Terminal()
@@ -184,11 +185,18 @@ def print_host_info(box_x, box_y, box_w, box_h):
             return
 
         command = SSH_FP_COMMAND % key_file
-        finger_print = str(
-            subprocess.Popen(command.split(" "),
-                             universal_newlines=True,
-                             stdout=subprocess.PIPE).stdout.read()
-        )
+        try:
+            finger_print = str(
+                subprocess.Popen(command.split(" "),
+                                 universal_newlines=True,
+                                 stdout=subprocess.PIPE).stdout.read()
+            )
+        except os.error as err:
+            # no execution access to ssh-keygen command,
+            # bail out with error
+            print(T.move(box_y+3, box_x) +
+                  "ssh-keygen command not executable: {0}".format(err))
+            return
 
         print(T.move(box_y+3, box_x) + finger_print)
     return
@@ -319,11 +327,11 @@ with T.fullscreen():
         # print appliance name and basic information on system defined
         # in CONFIG.
         # this should cover first 1/4 of screen, full width
-        print_appliance_name(1, 1, T.width, 1)
+        print_appliance_name(0, 1, T.width, 1)
 
         # print contact info box, half width
         HALF_WIDTH = (T.width - 4) // 2
-        print_contact(1, 4, HALF_WIDTH, 6)
+        print_contact(0, 4, HALF_WIDTH, 6)
         print_provider(4 + HALF_WIDTH, 4, HALF_WIDTH, 6)
 
         # print host info block
