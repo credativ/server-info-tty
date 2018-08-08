@@ -1,3 +1,8 @@
+# project specific file not to be included in repository
+# (there is a config-sample.ini)
+config.ini
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
