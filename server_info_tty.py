@@ -41,6 +41,11 @@ SSH_FP_COMMAND = "/usr/bin/ssh-keygen -l -f %s"
 
 T = Terminal()
 
+IF_NUMS = ['First Interface .... :',
+           'Second Interface ... :',
+           'Third Interface .... :',
+           'Fourth Interface ... :']
+
 #############################################################################
 # some handy logo handling functions
 
@@ -198,10 +203,10 @@ def print_network_info(box_x, box_y, box_w, box_h):
     print(T.move(box_y + 1, box_x) + T.white("Network Interfaces . :"))
     print(T.move(box_y + 1, box_x + 23) + str(count) + T.white)
 
-    if (
-            ('DEFAULT' in CONFIG) and
-            (CONFIG['DEFAULT'].get('allow_more', "yes") == "yes") and
-            (count > 1)):
+    if (('DEFAULT' in CONFIG) or
+        (('DEFAULT' in CONFIG) and
+         (CONFIG['DEFAULT'].get('allow_more', "yes") == "yes") and
+         (count > 1))):
         print(T.move(box_y + 2) +
               "Press " + T.yellow + "n" + T.white +
               " for more network interfaces.")
@@ -214,32 +219,52 @@ def print_network_info(box_x, box_y, box_w, box_h):
         if not interfaces:
             interfaces = Interface.get_interfaces()
 
-        y = box_y + 4
-        print(T.move(y, box_x) + T.white("First Interface .... :"))
-        print(T.move(y, box_x + 23) + T.normal + interfaces[0].name)
-        y += 1
-        print(T.move(y, box_x) + T.white("Hardware Address ... :"))
-        print(T.move(y, box_x + 23) + interfaces[0].hwaddress)
-        y += 1
-        print(T.move(y, box_x) + T.white("Interface type ..... :"))
-        print(T.move(y, box_x + 23) + interfaces[0].type)
-        y += 1
+        # determine, how many interface rows we should show on main page
+        if ((count > 3) and (T.width // 4 > box_w+1)):
+            if_to_show = 3
+        elif ((count > 2) and (T.width // 3 > box_w+1)):
+            if_to_show = 2
+        elif ((count > 1) and (T.width // 2 > box_w+1)):
+            if_to_show = 1
+        else:
+            if_to_show = 0
 
-        if 'network' in CONFIG:
-            if CONFIG['network'].get('ipv4', "yes") == "yes":
-                print(T.move(y, box_x) + T.white("IPv4 Address(es) ... :"))
-                for i in interfaces[0].ipv4:
-                    print(T.move(y, box_x + 23) + i)
+        # loop on the needed rows determined above
+        if_count = 0
+        while if_count <= if_to_show:
+            # calculate the x offset for current row
+            x_offset = if_count * 65 + box_x
+            y = box_y + 4
+            print(T.move(y, x_offset) + T.white(IF_NUMS[if_count]))
+            print(T.move(y, x_offset + 23)
+                  + T.normal
+                  + interfaces[if_count].name)
+            y += 1
+            print(T.move(y, x_offset) + T.white("Hardware Address ... :"))
+            print(T.move(y, x_offset + 23) + interfaces[if_count].hwaddress)
+            y += 1
+            print(T.move(y, x_offset) + T.white("Interface type ..... :"))
+            print(T.move(y, x_offset + 23) + interfaces[if_count].type)
+            y += 1
+
+            if 'network' in CONFIG:
+                if CONFIG['network'].get('ipv4', "yes") == "yes":
+                    print(T.move(y, x_offset)
+                          + T.white("IPv4 Address(es) ... :"))
+                    for i in interfaces[if_count].ipv4:
+                        print(T.move(y, x_offset + 23) + i)
                     y += 1
 
-            if CONFIG['network'].get('ipv6', "yes") == "yes":
-                print(T.move(y, box_x) + T.white("IPv6 Address(es) ... :"))
-                for i in interfaces[0].ipv6:
-                    print(T.move(y, box_x + 23) + i)
-                    y += 1
+                if CONFIG['network'].get('ipv6', "yes") == "yes":
+                    print(T.move(y, x_offset)
+                          + T.white("IPv6 Address(es) ... :"))
+                    for i in interfaces[if_count].ipv6:
+                        print(T.move(y, x_offset + 23) + i)
+                        y += 1
+            if_count += 1
 
     else:
-        print(T.move(box_y + 3, box_x) +
+        print(T.move(box_y + 3, x_offset) +
               T.normal_red("No network interfaces found."))
 
     return
@@ -305,7 +330,7 @@ with T.fullscreen():
         print_host_info(0, 10, T.width, 6)
 
         # print network data box, half width
-        print_network_info(0, 16, T.width / 2, T.height-LOGO_LINECOUNT-1)
+        print_network_info(0, 16, 64, T.height-LOGO_LINECOUNT-1)
 
         # logo should fill approx. the lower 1/3 of screen full width
         if LOGO_FILE is not None:
